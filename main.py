@@ -1,127 +1,82 @@
-import numpy as np
-import pandas as pd
-pd.set_option('max_columns', 105)
+import numpy as np 
+import pandas as pd 
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy import stats
-
-sns.set()
-
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-#warnings.filterwarnings("ignore")
-
-from subprocess import check_output
-print(check_output(["ls", "../input"]).decode("utf8"))
+sns.set(style="darkgrid")
 
 
-nr_cv = 5
-
-use_logvals = 1    
-
-target = 'SalePrice_Log'
-    
-
-min_val_corr = 0.4    
-    
- 
-drop_similar = 1
-
-
-def get_best_score(grid):
-    
-    best_score = np.sqrt(-grid.best_score_)
-    print(best_score)    
-    print(grid.best_params_)
-    print(grid.best_estimator_)
-    
-    return best_score
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+        
+        
+items=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/items.csv")
+shops=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/shops.csv")
+cats=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/item_categories.csv")
+train=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/sales_train.csv")
+test=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/test.csv")
 
 
-def print_cols_large_corr(df, nr_c, targ) :
-    corr = df.corr()
-    corr_abs = corr.abs()
-    print (corr_abs.nlargest(nr_c, targ)[targ])
-    
-    
-def plot_corr_matrix(df, nr_c, targ) :
-    
-    corr = df.corr()
-    corr_abs = corr.abs()
-    cols = corr_abs.nlargest(nr_c, targ)[targ].index
-    cm = np.corrcoef(df[cols].values.T)
+plt.figure(figsize=(10,4))
+plt.xlim(-100, 3000)
+flierprops = dict(marker='o', markerfacecolor='purple', markersize=6,
+                  linestyle='none', markeredgecolor='black')
+sns.boxplot(x=train.item_cnt_day, flierprops=flierprops)
 
-    plt.figure(figsize=(nr_c/1.5, nr_c/1.5))
-    sns.set(font_scale=1.25)
-    sns.heatmap(cm, linewidths=1.5, annot=True, square=True, 
-                fmt='.2f', annot_kws={'size': 10}, 
-                yticklabels=cols.values, xticklabels=cols.values
-               )
-    plt.show()
-    
-df_train = pd.read_csv("../input/train.csv")
-df_test = pd.read_csv("../input/test.csv")
-
-
-sns.distplot(df_train['SalePrice']);
-
-print("Skewness: %f" % df_train['SalePrice'].skew())
-print("Kurtosis: %f" % df_train['SalePrice'].kurt())
-
-
-df_train['SalePrice_Log'] = np.log(df_train['SalePrice'])
-
-sns.distplot(df_train['SalePrice_Log']);
-# skewness and kurtosis
-print("Skewness: %f" % df_train['SalePrice_Log'].skew())
-print("Kurtosis: %f" % df_train['SalePrice_Log'].kurt())
-
-df_train.drop('SalePrice', axis= 1, inplace=True)
+plt.figure(figsize=(10,4))
+plt.xlim(train.item_price.min(), train.item_price.max()*1.1)
+sns.boxplot(x=train.item_price, flierprops=flierprops)
 
 
 
-numerical_feats = df_train.dtypes[df_train.dtypes != "object"].index
-print("Number of Numerical features: ", len(numerical_feats))
-
-categorical_feats = df_train.dtypes[df_train.dtypes == "object"].index
-print("Number of Categorical features: ", len(categorical_feats))
+train = train[(train.item_price < 300000 )& (train.item_cnt_day < 1000)]
 
 
-print(df_train[numerical_feats].columns)
-print("*"*100)
-print(df_train[categorical_feats].columns)
+train = train[train.item_price > 0].reset_index(drop = True)
+train.loc[train.item_cnt_day < 1, "item_cnt_day"] = 0
 
 
-total = df_train.isnull().sum().sort_values(ascending=False)
-percent = (df_train.isnull().sum()/df_train.isnull().count()).sort_values(ascending=False)
-missing_data = pd.concat([total, percent], axis=1, keys=['Total', 'Percent'])
-missing_data.head(20)
+train.loc[train.shop_id == 0, 'shop_id'] = 57
+test.loc[test.shop_id == 0, 'shop_id'] = 57
+
+train.loc[train.shop_id == 1, 'shop_id'] = 58
+test.loc[test.shop_id == 1, 'shop_id'] = 58
+
+train.loc[train.shop_id == 10, 'shop_id'] = 11
+test.loc[test.shop_id == 10, 'shop_id'] = 11
 
 
-cols_fillna = ['PoolQC','MiscFeature','Alley','Fence','MasVnrType','FireplaceQu',
-               'GarageQual','GarageCond','GarageFinish','GarageType', 'Electrical',
-               'KitchenQual', 'SaleType', 'Functional', 'Exterior2nd', 'Exterior1st',
-               'BsmtExposure','BsmtCond','BsmtQual','BsmtFinType1','BsmtFinType2',
-               'MSZoning', 'Utilities']
-
-for col in cols_fillna:
-    df_train[col].fillna('None',inplace=True)
-    df_test[col].fillna('None',inplace=True)
-    
-    
-total = df_train.isnull().sum().sort_values(ascending=False)
-percent = (df_train.isnull().sum()/df_train.isnull().count()).sort_values(ascending=False)
-missing_data = pd.concat([total, percent], axis=1, keys=['Total', 'Percent'])
-missing_data.head(5)
+from sklearn.preprocessing import LabelEncoder
+shops["shop_category"] = LabelEncoder().fit_transform( shops.category )
+shops["shop_city"] = LabelEncoder().fit_transform( shops.city )
+shops = shops[["shop_id", "shop_category", "shop_city"]]
 
 
-df_train.fillna(df_train.mean(), inplace=True)
-df_test.fillna(df_test.mean(), inplace=True)
+from itertools import product
+import time
+ts = time.time()
+matrix = []
+cols  = ["date_block_num", "shop_id", "item_id"]
+for i in range(34):
+    sales = train[train.date_block_num == i]
+    matrix.append( np.array(list( product( [i], sales.shop_id.unique(), sales.item_id.unique() ) ), dtype = np.int16) )
+
+matrix = pd.DataFrame( np.vstack(matrix), columns = cols )
+matrix["date_block_num"] = matrix["date_block_num"].astype(np.int8)
+matrix["shop_id"] = matrix["shop_id"].astype(np.int8)
+matrix["item_id"] = matrix["item_id"].astype(np.int16)
+matrix.sort_values( cols, inplace = True )
+time.time()- ts
 
 
-total = df_train.isnull().sum().sort_values(ascending=False)
-percent = (df_train.isnull().sum()/df_train.isnull().count()).sort_values(ascending=False)
-missing_data = pd.concat([total, percent], axis=1, keys=['Total', 'Percent'])
-missing_data.head(5)
 
+train["revenue"] = train["item_cnt_day"] * train["item_price"]
+
+ts = time.time()
+group = train.groupby( ["date_block_num", "shop_id", "item_id"] ).agg( {"item_cnt_day": ["sum"]} )
+group.columns = ["item_cnt_month"]
+group.reset_index( inplace = True)
+matrix = pd.merge( matrix, group, on = cols, how = "left" )
+matrix["item_cnt_month"] = matrix["item_cnt_month"].fillna(0).astype(np.float16)
+time.time() - ts

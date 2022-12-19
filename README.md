@@ -1,2 +1,2 @@
-# Futur-Sales
-Predict Future Sales
+# House sales prediction
+Predict Sales

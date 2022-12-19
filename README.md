@@ -1,2 +1,2 @@
-# Futur-Sales
-Predict Future Sales
+# Futur Sales
+Predict Sales

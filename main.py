@@ -11,11 +11,11 @@ for dirname, _, filenames in os.walk('/kaggle/input'):
         print(os.path.join(dirname, filename))
         
         
-items=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/items.csv")
-shops=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/shops.csv")
-cats=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/item_categories.csv")
-train=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/sales_train.csv")
-test=pd.read_csv("/kaggle/input/competitive-data-science-predict-future-sales/test.csv")
+items=pd.read_csv("competitive-data-science-predict-future-sales/items.csv")
+shops=pd.read_csv("competitive-data-science-predict-future-sales/shops.csv")
+cats=pd.read_csv("competitive-data-science-predict-future-sales/item_categories.csv")
+train=pd.read_csv("competitive-data-science-predict-future-sales/sales_train.csv")
+test=pd.read_csv("competitive-data-science-predict-future-sales/test.csv")
 
 
 plt.figure(figsize=(10,4))
@@ -80,3 +80,5 @@ group.reset_index( inplace = True)
 matrix = pd.merge( matrix, group, on = cols, how = "left" )
 matrix["item_cnt_month"] = matrix["item_cnt_month"].fillna(0).astype(np.float16)
 time.time() - ts
+
+
